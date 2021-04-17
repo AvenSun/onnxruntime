@@ -225,9 +225,18 @@ struct ProviderHost {
   virtual ONNX_NAMESPACE::TensorShapeProto* TypeProto_Tensor__mutable_shape(ONNX_NAMESPACE::TypeProto_Tensor* p) = 0;
   virtual int32_t TypeProto_Tensor__elem_type(const ONNX_NAMESPACE::TypeProto_Tensor* p) = 0;
 
+  // TypeProto_SparseTensor
+  virtual bool TypeProto_SparseTensor__has_shape(const ONNX_NAMESPACE::TypeProto_SparseTensor* p) = 0;
+  virtual const ONNX_NAMESPACE::TensorShapeProto& TypeProto_SparseTensor__shape(const ONNX_NAMESPACE::TypeProto_SparseTensor* p) = 0;
+  virtual ONNX_NAMESPACE::TensorShapeProto* TypeProto_SparseTensor__mutable_shape(ONNX_NAMESPACE::TypeProto_SparseTensor* p) = 0;
+  virtual int32_t TypeProto_SparseTensor__elem_type(const ONNX_NAMESPACE::TypeProto_SparseTensor* p) = 0;
+
   // TypeProto
   virtual const ONNX_NAMESPACE::TypeProto_Tensor& TypeProto__tensor_type(const ONNX_NAMESPACE::TypeProto* p) = 0;
   virtual ONNX_NAMESPACE::TypeProto_Tensor* TypeProto__mutable_tensor_type(ONNX_NAMESPACE::TypeProto* p) = 0;
+  
+  virtual const ONNX_NAMESPACE::TypeProto_SparseTensor& TypeProto__sparse_tensor_type(const ONNX_NAMESPACE::TypeProto* p) = 0;
+  virtual ONNX_NAMESPACE::TypeProto_SparseTensor* TypeProto__mutable_sparse_tensor_type(ONNX_NAMESPACE::TypeProto* p) = 0;
   virtual int TypeProto__value_case(const ONNX_NAMESPACE::TypeProto* p) = 0;
 
   // AttributeProto
@@ -339,11 +348,15 @@ struct ProviderHost {
   // DataTransferManager
   virtual Status DataTransferManager__CopyTensor(const DataTransferManager* p, const Tensor& src, Tensor& dst, int exec_queue_id) = 0;
   virtual Status DataTransferManager__CopyTensor(const DataTransferManager* p, const Tensor& src, Tensor& dst) = 0;
+  virtual Status DataTransferManager__CopyTensor(const DataTransferManager* p, const SparseTensor& src, SparseTensor& dst) = 0;
+  virtual Status DataTransferManager__CopyTensor(const DataTransferManager* p, const SparseTensor& src, SparseTensor& dst, int exec_queue_id) = 0;
+  virtual Status DataTransferManager__CopyTensors(const DataTransferManager* p, const std::vector<IDataTransfer::SparseSrcDstPair>& src_dst_pairs) = 0;
   virtual const IDataTransfer* DataTransferManager__GetDataTransfer(const DataTransferManager* p, const OrtDevice& src_device, const OrtDevice& dst_device) = 0;
 
   // IDataTransfer
   virtual Status IDataTransfer__CopyTensor(const IDataTransfer* p, const Tensor& src, Tensor& dst) = 0;
   virtual Status IDataTransfer__CopyTensors(const IDataTransfer* p, const std::vector<IDataTransfer::SrcDstPair>& src_dst_pairs) = 0;
+  virtual Status IDataTransfer__CopyTensors(const IDataTransfer* p, const std::vector<IDataTransfer::SparseSrcDstPair>& src_dst_pairs) = 0;
 
   // IndexedSubGraph_MetaDef
   virtual std::unique_ptr<IndexedSubGraph_MetaDef> IndexedSubGraph_MetaDef__construct() = 0;
@@ -436,6 +449,21 @@ struct ProviderHost {
   virtual MLDataType DataTypeImpl__GetTensorType_double() = 0;
   virtual MLDataType DataTypeImpl__GetTensorType_BFloat16() = 0;
   virtual MLDataType DataTypeImpl__GetTensorType_MLFloat16() = 0;
+
+  virtual MLDataType DataTypeImpl__GetSparseTensorType_bool() = 0;
+  virtual MLDataType DataTypeImpl__GetSparseTensorType_int8() = 0;
+  virtual MLDataType DataTypeImpl__GetSparseTensorType_uint8() = 0;
+  virtual MLDataType DataTypeImpl__GetSparseTensorType_int16() = 0;
+  virtual MLDataType DataTypeImpl__GetSparseTensorType_uint16() = 0;
+  virtual MLDataType DataTypeImpl__GetSparseTensorType_int32() = 0;
+  virtual MLDataType DataTypeImpl__GetSparseTensorType_uint32() = 0;
+  virtual MLDataType DataTypeImpl__GetSparseTensorType_int64() = 0;
+  virtual MLDataType DataTypeImpl__GetSparseTensorType_uint64() = 0;
+  virtual MLDataType DataTypeImpl__GetSparseTensorType_float() = 0;
+  virtual MLDataType DataTypeImpl__GetSparseTensorType_double() = 0;
+  virtual MLDataType DataTypeImpl__GetSparseTensorType_BFloat16() = 0;
+  virtual MLDataType DataTypeImpl__GetSparseTensorType_MLFloat16() = 0;
+
   virtual const char* DataTypeImpl__ToString(MLDataType type) = 0;
   virtual bool DataTypeImpl__IsTensorType(const DataTypeImpl* p) = 0;
   virtual bool DataTypeImpl__IsTensorSequenceType(const DataTypeImpl* p) = 0;
@@ -1018,9 +1046,22 @@ struct TypeProto_Tensor final {
   PROVIDER_DISALLOW_ALL(TypeProto_Tensor)
 };
 
+struct TypeProto_SparseTensor final {
+  bool has_shape() const { return g_host->TypeProto_SparseTensor__has_shape(this); }
+  const TensorShapeProto& shape() const { return g_host->TypeProto_SparseTensor__shape(this); }
+  TensorShapeProto* mutable_shape() { return g_host->TypeProto_SparseTensor__mutable_shape(this); }
+  int32_t elem_type() const { return g_host->TypeProto_SparseTensor__elem_type(this); }
+
+  PROVIDER_DISALLOW_ALL(TypeProto_SparseTensor)
+};
+
+
 struct TypeProto final {
   const TypeProto_Tensor& tensor_type() const { return g_host->TypeProto__tensor_type(this); }
   TypeProto_Tensor* mutable_tensor_type() { return g_host->TypeProto__mutable_tensor_type(this); }
+
+  const TypeProto_SparseTensor& sparse_tensor_type() const { return g_host->TypeProto__sparse_tensor_type(this); }
+  TypeProto_SparseTensor* mutable_sparse_tensor_type() { return g_host->TypeProto__mutable_sparse_tensor_type(this); }
 
   enum ValueCase {
     kTensorType = 1,
@@ -1082,7 +1123,9 @@ struct ComputeCapability final {
 struct DataTransferManager final {
   Status CopyTensor(const Tensor& src, Tensor& dst, int exec_queue_id) const { return g_host->DataTransferManager__CopyTensor(this, src, dst, exec_queue_id); }
   Status CopyTensor(const Tensor& src, Tensor& dst) const { return g_host->DataTransferManager__CopyTensor(this, src, dst); }
-
+  Status CopyTensor(const SparseTensor& src, SparseTensor& dst) const { return g_host->DataTransferManager__CopyTensor(this, src, dst); }
+  common::Status CopyTensor(const SparseTensor& src, SparseTensor& dst, int exec_queue_id) const { return g_host->DataTransferManager__CopyTensor(this, src, dst, exec_queue_id); }
+  common::Status CopyTensors(const std::vector<IDataTransfer::SparseSrcDstPair>& src_dst_pairs) const { return g_host->DataTransferManager__CopyTensors(this, src_dst_pairs); }
   const IDataTransfer* GetDataTransfer(const OrtDevice& src_device, const OrtDevice& dst_device) const { return g_host->DataTransferManager__GetDataTransfer(this, src_device, dst_device); }
 
   PROVIDER_DISALLOW_ALL(DataTransferManager)
@@ -1255,6 +1298,8 @@ class DataTypeImpl final {
   static MLDataType GetType();
   template <typename elemT>
   static MLDataType GetTensorType();
+  template <typename elemT>
+  static MLDataType GetSparseTensorType();
 
   bool IsTensorType() const { return g_host->DataTypeImpl__IsTensorType(this); }
   bool IsTensorSequenceType() const { return g_host->DataTypeImpl__IsTensorSequenceType(this); }

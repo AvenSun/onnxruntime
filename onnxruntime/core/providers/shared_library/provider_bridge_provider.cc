@@ -152,11 +152,42 @@ MLDataType DataTypeImpl::GetTensorType<BFloat16>() { return Provider_GetHost()->
 template <>
 MLDataType DataTypeImpl::GetTensorType<MLFloat16>() { return Provider_GetHost()->DataTypeImpl__GetTensorType_MLFloat16(); }
 
+template <>
+MLDataType DataTypeImpl::GetSparseTensorType<bool>() { return Provider_GetHost()->DataTypeImpl__GetSparseTensorType_bool(); }
+template <>
+MLDataType DataTypeImpl::GetSparseTensorType<int8_t>() { return Provider_GetHost()->DataTypeImpl__GetSparseTensorType_int8(); }
+template <>
+MLDataType DataTypeImpl::GetSparseTensorType<uint8_t>() { return Provider_GetHost()->DataTypeImpl__GetSparseTensorType_uint8(); }
+template <>
+MLDataType DataTypeImpl::GetSparseTensorType<int16_t>() { return Provider_GetHost()->DataTypeImpl__GetSparseTensorType_int16(); }
+template <>
+MLDataType DataTypeImpl::GetSparseTensorType<uint16_t>() { return Provider_GetHost()->DataTypeImpl__GetSparseTensorType_uint16(); }
+template <>
+MLDataType DataTypeImpl::GetSparseTensorType<int32_t>() { return Provider_GetHost()->DataTypeImpl__GetSparseTensorType_int32(); }
+template <>
+MLDataType DataTypeImpl::GetSparseTensorType<uint32_t>() { return Provider_GetHost()->DataTypeImpl__GetSparseTensorType_uint32(); }
+template <>
+MLDataType DataTypeImpl::GetSparseTensorType<int64_t>() { return Provider_GetHost()->DataTypeImpl__GetSparseTensorType_int64(); }
+template <>
+MLDataType DataTypeImpl::GetSparseTensorType<uint64_t>() { return Provider_GetHost()->DataTypeImpl__GetSparseTensorType_uint64(); }
+template <>
+MLDataType DataTypeImpl::GetSparseTensorType<float>() { return Provider_GetHost()->DataTypeImpl__GetSparseTensorType_float(); }
+template <>
+MLDataType DataTypeImpl::GetSparseTensorType<double>() { return Provider_GetHost()->DataTypeImpl__GetSparseTensorType_double(); }
+template <>
+MLDataType DataTypeImpl::GetSparseTensorType<BFloat16>() { return Provider_GetHost()->DataTypeImpl__GetSparseTensorType_BFloat16(); }
+template <>
+MLDataType DataTypeImpl::GetSparseTensorType<MLFloat16>() { return Provider_GetHost()->DataTypeImpl__GetSparseTensorType_MLFloat16(); }
+
 Status IDataTransfer::CopyTensor(const Tensor& src, Tensor& dst) const {
   return g_host->IDataTransfer__CopyTensor(this, src, dst);
 }
 
 Status IDataTransfer::CopyTensors(const std::vector<SrcDstPair>& src_dst_pairs) const {
+  return g_host->IDataTransfer__CopyTensors(this, src_dst_pairs);
+}
+
+Status IDataTransfer::CopyTensors(const std::vector<SparseSrcDstPair>& src_dst_pairs) const {
   return g_host->IDataTransfer__CopyTensors(this, src_dst_pairs);
 }
 

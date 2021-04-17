@@ -333,6 +333,8 @@ void addOrtValueMethods(pybind11::module& m);
 
 void addIoBindingMethods(pybind11::module& m);
 
+void addSparseTensorMethods(pybind11::module& m);
+
 const char* GetDeviceName(const OrtDevice& device);
 
 bool IsCudaDeviceIdValid(const onnxruntime::logging::Logger& logger, int id);

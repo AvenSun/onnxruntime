@@ -115,6 +115,7 @@ typedef enum ONNXTensorElementDataType {
   ONNX_TENSOR_ELEMENT_DATA_TYPE_BFLOAT16     // Non-IEEE floating-point format based on IEEE754 single-precision
 } ONNXTensorElementDataType;
 
+
 // Synced with onnx TypeProto oneof
 typedef enum ONNXType {
   ONNX_TYPE_UNKNOWN,
@@ -124,6 +125,17 @@ typedef enum ONNXType {
   ONNX_TYPE_OPAQUE,
   ONNX_TYPE_SPARSETENSOR,
 } ONNXType;
+
+// This types are synced with internal
+// SparseFormatFlags but are not exposed
+// as flags
+typedef enum OrtSparseFormat {
+  ORT_SPARSE_UNDEFINED = 0,
+  ORT_SPARSE_COO = 0x1,
+  ORT_SPARSE_CSRC = 0x2,
+  ORT_SPARSE_BLOCK_SPARSE = 0x4
+} OrtSparseFormat;
+
 
 typedef enum OrtLoggingLevel {
   ORT_LOGGING_LEVEL_VERBOSE,

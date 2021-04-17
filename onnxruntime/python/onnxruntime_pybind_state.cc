@@ -793,6 +793,74 @@ void addGlobalMethods(py::module& m, Environment& env) {
           throw std::runtime_error("Error when creating and registering allocator: " + st.ErrorMessage());
         }
       });
+  m.def(
+      "allocate_numpy_array_on_device", [](const OrtDevice& ort_device, 
+                                           const py::dtype& dt,
+                                           const std::vector<int64_t>& shape,
+                                           const py::list& list_on_cpu
+                                           ) -> py::array {
+
+        if (!IsNumericDType(dt)) {
+          throw std::runtime_error("Support only numeric datatypes");
+        }
+
+        AllocatorPtr allocator;
+        MemCpyFunc cpy_func;
+        switch (ort_device.Type()) {
+          // This is redundant and here is only for completeness
+          case OrtDevice::CPU:
+            allocator = GetAllocator();
+            cpy_func = CpuToCpuMemCpy;
+            break;
+#ifdef USE_CUDA
+          case OrtDevice::GPU:
+            allocator = GetCudaAllocator(ort_device.Id());
+            cpy_func = CpuToCudaMemCpy;
+            break;
+#endif
+          default:
+            ORT_THROW("Device type is not supported in this build: ", GetDeviceName(ort_device));
+        }
+
+        if (allocator == nullptr) {
+          ORT_THROW("Failed to get allocator for device: ", GetDeviceName(ort_device), " id: ", ort_device.Id());
+        }
+
+        int64_t items = 1;
+        for (auto d : shape) {
+          items *= d;
+        }
+        const auto alloc_size = items * dt.itemsize();
+        auto data_on_cpu = py::cast<py::array>(list_on_cpu);
+        if (data_on_cpu.nbytes() > alloc_size) {
+          ORT_THROW("data bytes size: ", data_on_cpu.nbytes(), " is greater then shape bytes size: ", alloc_size);
+        }
+
+        struct ptr_cont {
+          IAllocatorUniquePtr<void> ptr;
+          explicit ptr_cont(IAllocatorUniquePtr<void>&& p_p) : ptr(std::move(p_p)) {}
+        };
+
+        auto alloc_ptr = IAllocator::MakeUniquePtr<void>(allocator, alloc_size);
+        void* array_ptr = alloc_ptr.get();
+        auto cc = std::make_unique<ptr_cont>(std::move(alloc_ptr));
+        if (data_on_cpu.nbytes() > 0) {
+          if(!PyArray_ISCONTIGUOUS(reinterpret_cast<PyArrayObject*>(data_on_cpu.ptr()))) {
+            ORT_THROW("Expecting contiguous data array");
+          }
+          cpy_func(array_ptr, data_on_cpu.data(), data_on_cpu.nbytes());
+        }
+        py::capsule cap(cc.get(), [](void* ptr) { 
+          delete reinterpret_cast<ptr_cont*>(ptr);
+        });
+        cc.release();
+        py::array result(dt, shape, array_ptr, cap);
+        return result;
+      },
+      "Allocates numpy array of specified shape on a specified device. Errors out if device is not supported."
+      "Such as array can then be used to serve as an underlying storage for Tensors and SparseTensors and for IOBinding."
+      "if data is not empty it will copy it into the allocated memory, providing it fits");
+
 #ifdef ENABLE_TRAINING
   m.def(
       "register_aten_op_executor", [](const std::string& aten_op_executor_address_str) -> void {
@@ -1628,6 +1696,7 @@ PYBIND11_MODULE(onnxruntime_pybind11_state, m) {
   addGlobalMethods(m, env);
   addObjectMethods(m, env);
   addOrtValueMethods(m);
+  addSparseTensorMethods(m);
   addIoBindingMethods(m);
 
 #if !defined(ORT_MINIMAL_BUILD) || defined(ORT_EXTENDED_MINIMAL_BUILD) || defined(ORT_MINIMAL_BUILD_CUSTOM_OPS)
