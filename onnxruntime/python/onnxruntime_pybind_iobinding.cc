@@ -163,12 +163,16 @@ void addIoBindingMethods(pybind11::module& m) {
         const std::vector<OrtValue>& outputs = io_binding->Get()->GetOutputs();
         std::vector<py::object> rfetch;
         rfetch.reserve(outputs.size());
+        size_t pos = 0;
         for (const auto& ort_value : outputs) {
           if (ort_value.IsTensor()) {
-            AddTensorAsPyObj(ort_value, rfetch, &io_binding->GetInferenceSession()->GetDataTransferManager(), nullptr);
+            rfetch.push_back(AddTensorAsPyObj(ort_value, &io_binding->GetInferenceSession()->GetDataTransferManager(), nullptr));
+          } else if (ort_value.IsSparseTensor()) {
+            rfetch.push_back(GetPyObjectFromSparseTensor(pos, ort_value, &io_binding->GetInferenceSession()->GetDataTransferManager()));
           } else {
             AddNonTensorAsPyObj(ort_value, rfetch, &io_binding->GetInferenceSession()->GetDataTransferManager(), nullptr);
           }
+          ++pos;
         }
         return rfetch;
       });

@@ -26,9 +26,6 @@ namespace py = pybind11;
 extern const char* PYTHON_ORTVALUE_OBJECT_NAME;
 extern const char* PYTHON_ORTVALUE_NATIVE_OBJECT_ATTR;
 
-extern const char* PYTHON_SPARSE_TENSOR_OBJECT_NAME;
-extern const char* PYTHON_SPARSE_TENSOR_NATIVE_OBJECT_ATTR;
-
 bool IsNumericNumpyType(int npy_type);
 
 bool IsNumericNumpyArray(const py::object& py_object);
@@ -45,20 +42,24 @@ int OnnxRuntimeTensorToNumpyType(const DataTypeImpl* tensor_type);
 
 MLDataType NumpyTypeToOnnxRuntimeType(int numpy_type);
 
+MLDataType NumpyToOnnxRuntimeTensorType(int numpy_type);
+
 using MemCpyFunc = void (*)(void*, const void*, size_t);
 
 void CpuToCpuMemCpy(void*, const void*, size_t);
 
 void CopyDataToTensor(const py::array& py_array, int npy_type, Tensor& tensor, MemCpyFunc mem_cpy_to_device = CpuToCpuMemCpy);
 
-void AddTensorAsPyObj(const OrtValue& val, std::vector<pybind11::object>& pyobjs,
-                      const DataTransferManager* data_transfer_manager,
+py::object AddTensorAsPyObj(const OrtValue& val, const DataTransferManager* data_transfer_manager,
                       const std::unordered_map<OrtDevice::DeviceType, MemCpyFunc>* mem_cpy_to_host_functions);
 
-void AddNonTensorAsPyObj(const OrtValue& val, std::vector<pybind11::object>& pyobjs,
+py::object GetPyObjectFromSparseTensor(size_t pos, const OrtValue& ort_value, const DataTransferManager* data_transfer_manager);
+
+py::object AddNonTensorAsPyObj(const OrtValue& val,
                          const DataTransferManager* data_transfer_manager,
                          const std::unordered_map<OrtDevice::DeviceType, MemCpyFunc>* mem_cpy_to_host_functions);
 
+OrtMemoryInfo GetMemoryInfoPerDeviceType(const OrtDevice& ort_device);
 
 #ifdef USE_CUDA
 
@@ -71,6 +72,8 @@ const std::unordered_map<OrtDevice::DeviceType, MemCpyFunc>* GetCudaToHostMemCpy
 bool IsCudaDeviceIdValid(const onnxruntime::logging::Logger& logger, int id);
 
 AllocatorPtr GetCudaAllocator(OrtDevice::DeviceId id);
+
+std::unique_ptr<IDataTransfer> GetGPUDataTransfer();
 
 #endif
 
@@ -123,8 +126,8 @@ class PySparseTensor {
   /// <param name="storage">a collection reference guards</param>
   PySparseTensor(std::unique_ptr<SparseTensor>&& instance,
                  std::vector<py::object>&& storage)
-      : instance_(std::move(instance)), backing_storage_(std::move(storage)) {
-    sparse_tensor_ = instance_.get();
+      : backing_storage_(std::move(storage)), ort_value_() {
+    Init(std::move(instance));
   }
 
   /// <summary>
@@ -132,37 +135,45 @@ class PySparseTensor {
   /// </summary>
   /// <param name="instance"></param>
   explicit PySparseTensor(std::unique_ptr<SparseTensor>&& instance)
-      : instance_(std::move(instance)), backing_storage_() {
-    sparse_tensor_ = instance_.get();
+      : backing_storage_(), ort_value_() {
+    Init(std::move(instance));
   }
 
-  /// <summary>
-  /// Use this constructor when we represent a value that is in the
-  /// returned array of OrtValues
-  /// </summary>
-  /// <param name="sparse_tensor"></param>
-  explicit PySparseTensor(SparseTensor* sparse_tensor)
-      : sparse_tensor_(sparse_tensor) {
+  explicit PySparseTensor(const OrtValue& ort_value) 
+   : backing_storage_(), ort_value_(ort_value) {}
+
+  PySparseTensor(const PySparseTensor&) = delete;
+  PySparseTensor& operator=(const PySparseTensor&) = delete;
+
+  PySparseTensor(PySparseTensor&& o) noexcept {
+    *this = std::move(o);
+  }
+
+  PySparseTensor& operator=(PySparseTensor&& o) noexcept {
+    ort_value_ = std::move(o.ort_value_);
+    backing_storage_ = std::move(o.backing_storage_);
+    return *this;
   }
 
   ~PySparseTensor();
 
   const SparseTensor& Instance() const {
-    return *sparse_tensor_;
+    return ort_value_.Get<SparseTensor>();
   }
 
-  SparseTensor& Instance() {
-    return *sparse_tensor_;
+  SparseTensor* Instance() {
+    return ort_value_.GetMutable<SparseTensor>();
+  }
+
+  std::unique_ptr<OrtValue> AsOrtValue() const {
+    return std::make_unique<OrtValue>(ort_value_);
   }
 
  private:
-  // Not null when we actually own the class, nullptr when
-  // when we represent an instance contained in the OrtValue
-  std::unique_ptr<SparseTensor> instance_;
-  // This points to an external instance in the OrtValue on return
-  // or points to a instance_
-  SparseTensor* sparse_tensor_;
 
+  void Init(std::unique_ptr<SparseTensor>&& instance);
+
+  OrtValue ort_value_;
   // These will hold references to underpinning python array objects
   // when they serve as a backing storage for a feeding SparseTensor
   std::vector<py::object> backing_storage_;

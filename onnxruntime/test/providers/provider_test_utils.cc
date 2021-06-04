@@ -625,11 +625,9 @@ void OpTester::AddSparseCsrTensorData(std::vector<Data>& data,
   auto p_tensor = MakeSparseTensor(data_type, nnz, dims);
   CopyDataToTensor(values, p_tensor->MutableValues());
 
-  TensorShape inner_shape{static_cast<int64_t>(inner_indices.size())};
-  TensorShape outer_shape{static_cast<int64_t>(outer_indices.size())};
   SparseCsrcFormatRep* rep;
   ORT_THROW_IF_ERROR(p_tensor->RepBuilder<SparseCsrcBuilder>().Create(
-      SparseCsrcFormatRep::kRowMajor, inner_shape, outer_shape, rep));
+      SparseCsrcFormatRep::kRowMajor, inner_indices.size(), outer_indices.size(), rep));
   CopyDataToTensor(inner_indices.as_bytes(), rep->MutableInner());
   CopyDataToTensor(outer_indices.as_bytes(), rep->MutableOuter());
 

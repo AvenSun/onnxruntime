@@ -150,6 +150,16 @@ class SparseTensor final {
   SparseFormatFlags FormatFlags() const noexcept {
     return format_flags_;
   }
+
+  /// <summary>
+  /// Tests if a specific flag set in the mask
+  /// </summary>
+  /// <param name="flag">flag to be tested</param>
+  /// <returns></returns>
+  bool IsFormatFlagSet(SparseFormatFlags flag) const noexcept {
+    return IsSet(format_flags_, flag);
+  }
+
   /// <summary>
   /// Returns a would be dense_shape
   /// </summary>

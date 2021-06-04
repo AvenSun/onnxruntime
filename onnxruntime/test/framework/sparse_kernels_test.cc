@@ -27,7 +27,6 @@
 #include "core/util/math_cpuonly.h"
 #include <Eigen/SparseCore>
 
-
 using namespace ONNX_NAMESPACE;
 using namespace onnxruntime::common;
 
@@ -546,7 +545,7 @@ TEST(SparseCrcsFormatTests, Test1) {
       48, 49, 50, 51, 52, 53};
 
   // Row major
-  const std::vector<int64_t> inner_indices = {
+  std::vector<int64_t> inner_indices = {
       1, 2, 6, 7, 8,
       0, 1, 2, 6, 7, 8,
       0, 1, 2, 6, 7, 8,
@@ -559,7 +558,7 @@ TEST(SparseCrcsFormatTests, Test1) {
 
   ASSERT_EQ(values.size(), inner_indices.size());
 
-  const std::vector<int64_t> outer_indices = {
+  std::vector<int64_t> outer_indices = {
       0, 5, 11, 17, 23, 29, 35, 41, 47};
 
   ASSERT_EQ(9U, outer_indices.size());
@@ -574,8 +573,9 @@ TEST(SparseCrcsFormatTests, Test1) {
 
   SparseCsrcFormatRep* rep = nullptr;
   ASSERT_TRUE(tensor_alloc.RepBuilder<SparseCsrcBuilder>().Create(SparseCsrcFormatRep::kRowMajor,
-                                                                       {static_cast<int64_t>(inner_indices.size())},
-                                                                       {static_cast<int64_t>(outer_indices.size())}, rep)
+                                                                  inner_indices.size(),
+                                                                  outer_indices.size(),
+                                                                  rep)
                   .IsOK());
   ASSERT_NE(rep, nullptr);
   {
@@ -596,15 +596,15 @@ TEST(SparseCrcsFormatTests, Test1) {
 
   rep = nullptr;
   ASSERT_STATUS_OK(tensor_wrap.RepBuilder<SparseCsrcBuilder>().Create(SparseCsrcFormatRep::kRowMajor,
-                                                                      {static_cast<int64_t>(inner_indices.size())},
-                                                                      {static_cast<int64_t>(outer_indices.size())},
-                                                                      const_cast<int64_t*>(inner_indices.data()),
-                                                                      const_cast<int64_t*>(outer_indices.data())));
+                                                                      inner_indices.size(),
+                                                                      outer_indices.size(),
+                                                                      inner_indices.data(),
+                                                                      outer_indices.data()));
 
   ASSERT_EQ(0, memcmp(tensor_alloc.Values().Data<float>(), tensor_wrap.Values().Data<float>(), values.size() * sizeof(float)));
   ASSERT_EQ(0, memcmp(tensor_alloc.GetRep<SparseCsrcFormatRep>()->Inner().Data<int64_t>(),
-         tensor_wrap.GetRep<SparseCsrcFormatRep>()->Inner().Data<int64_t>(),
-         inner_indices.size() * sizeof(int64_t)));
+                      tensor_wrap.GetRep<SparseCsrcFormatRep>()->Inner().Data<int64_t>(),
+                      inner_indices.size() * sizeof(int64_t)));
   ASSERT_EQ(0, memcmp(tensor_alloc.GetRep<SparseCsrcFormatRep>()->Outer().Data<int64_t>(),
                       tensor_wrap.GetRep<SparseCsrcFormatRep>()->Outer().Data<int64_t>(),
                       outer_indices.size() * sizeof(int64_t)));
@@ -1219,7 +1219,7 @@ using SparseMatrixRowMajor = Eigen::SparseMatrix<T, Eigen::RowMajor, int64_t>;
 //nnz: 2
 //Storage type size is: 4
 
-template<typename T>
+template <typename T>
 inline int64_t vector_len(const std::vector<T>& v) {
   return static_cast<int64_t>(v.size());
 }

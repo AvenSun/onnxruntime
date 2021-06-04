@@ -98,6 +98,8 @@ AllocatorPtr AllocatorManager::GetAllocator(int id, OrtMemType mem_type) const {
 template <>
 MLDataType DataTypeImpl::GetType<Tensor>() { return Provider_GetHost()->DataTypeImpl__GetType_Tensor(); }
 template <>
+MLDataType DataTypeImpl::GetType<SparseTensor>() { return Provider_GetHost()->DataTypeImpl__GetType_SparseTensor(); }
+template <>
 MLDataType DataTypeImpl::GetType<TensorSeq>() { return Provider_GetHost()->DataTypeImpl__GetType_TensorSeq(); }
 template <>
 MLDataType DataTypeImpl::GetType<bool>() { return Provider_GetHost()->DataTypeImpl__GetType_bool(); }
@@ -174,6 +176,8 @@ template <>
 MLDataType DataTypeImpl::GetSparseTensorType<float>() { return Provider_GetHost()->DataTypeImpl__GetSparseTensorType_float(); }
 template <>
 MLDataType DataTypeImpl::GetSparseTensorType<double>() { return Provider_GetHost()->DataTypeImpl__GetSparseTensorType_double(); }
+template <>
+MLDataType DataTypeImpl::GetSparseTensorType<std::string>() { return Provider_GetHost()->DataTypeImpl__GetSparseTensorType_string(); }
 template <>
 MLDataType DataTypeImpl::GetSparseTensorType<BFloat16>() { return Provider_GetHost()->DataTypeImpl__GetSparseTensorType_BFloat16(); }
 template <>

@@ -119,18 +119,18 @@ common::Status DenseTensorToSparseCsr(const DataTransferManager& data_manager, c
 
   assert(outer_indices.size() == static_cast<size_t>(rows + 1));
   const auto nnz = inner_indicies.size();
+  const size_t outer_size = (nnz > 0) ? outer_indices.size() : 0U;
 
-  TensorShape inner_shape{static_cast<int64_t>(nnz)};
-  TensorShape outer_shape{(nnz > 0) ? rows + 1 : 0};
   SparseTensor dst_tensor(src.DataType(), src.Shape(), nnz, dst_allocator);
   SparseCsrcFormatRep* rep;
   ORT_RETURN_IF_ERROR(dst_tensor.RepBuilder<SparseCsrcBuilder>().Create(SparseCsrcFormatRep::kRowMajor,
-                                                                             inner_shape, outer_shape, rep));
+                                                                        nnz, outer_size, rep));
   if (nnz > 0) {
     ORT_RETURN_IF_ERROR(data_manager.CopyTensor(nnz_tensor, dst_tensor.MutableValues()));
-    Tensor inner(DataTypeImpl::GetType<int64_t>(), inner_shape, inner_indicies.data(), cpu_allocator->Info());
+    Tensor inner(DataTypeImpl::GetType<int64_t>(), {static_cast<int64_t>(nnz)}, inner_indicies.data(), cpu_allocator->Info());
     ORT_RETURN_IF_ERROR(data_manager.CopyTensor(inner, rep->MutableInner()));
-    Tensor outer(DataTypeImpl::GetType<int64_t>(), outer_shape, outer_indices.data(), cpu_allocator->Info());
+    Tensor outer(DataTypeImpl::GetType<int64_t>(), {static_cast<int64_t>(outer_size)},
+      outer_indices.data(), cpu_allocator->Info());
     ORT_RETURN_IF_ERROR(data_manager.CopyTensor(outer, rep->MutableOuter()));
   }
 

@@ -25,18 +25,18 @@ class SparseCsrcFormatRep : public SparseRep {
   /// <param name="inner_shape">inner indices shape. Normally 1-D, but we would like to support batches in the future</param>
   /// <param name="outer_shape">outer indices shape. Normally 1-D, but we would like to support batches in the future</param>
   /// <param name="allocator"></param>
-  SparseCsrcFormatRep(Order order, const TensorShape& inner_shape,
-                      const TensorShape& outer_shape, const AllocatorPtr& allocator)
+  SparseCsrcFormatRep(Order order, size_t inner_size,
+                      size_t outer_size, const AllocatorPtr& allocator)
       : major_(order),
-        inner_indecies_(DataTypeImpl::GetType<int64_t>(), inner_shape, allocator),
-        outer_indecies_(DataTypeImpl::GetType<int64_t>(), outer_shape, allocator) {}
+        inner_indecies_(DataTypeImpl::GetType<int64_t>(), {static_cast<int64_t>(inner_size)}, allocator),
+        outer_indecies_(DataTypeImpl::GetType<int64_t>(), {static_cast<int64_t>(outer_size)}, allocator) {}
 
-  SparseCsrcFormatRep(Order order, const TensorShape& inner_shape, const TensorShape& outer_shape,
+  SparseCsrcFormatRep(Order order, size_t inner_size, size_t outer_size,
                       int64_t* inner_data, int64_t* outer_data,
                       const OrtMemoryInfo& info)
       : major_(order),
-        inner_indecies_(DataTypeImpl::GetType<int64_t>(), inner_shape, inner_data, info, 0),
-        outer_indecies_(DataTypeImpl::GetType<int64_t>(), outer_shape, outer_data, info, 0) {}
+        inner_indecies_(DataTypeImpl::GetType<int64_t>(), {static_cast<int64_t>(inner_size)}, inner_data, info, 0),
+        outer_indecies_(DataTypeImpl::GetType<int64_t>(), {static_cast<int64_t>(outer_size)}, outer_data, info, 0) {}
 
   ~SparseCsrcFormatRep() override;
 
@@ -88,11 +88,11 @@ class SparseCsrcBuilder {
   ~SparseCsrcBuilder() = default;
 
   Status Create(SparseCsrcFormatRep::Order major,
-                     const TensorShape& inner, const TensorShape& outer,
+                     size_t inner_size, size_t outer_size,
                      SparseCsrcFormatRep*& result);
 
   Status Create(SparseCsrcFormatRep::Order major,
-                     const TensorShape& inner, const TensorShape& outer,
+                     size_t inner_size, size_t outer_size,
                      int64_t* inner_data, int64_t* outer_data);
 
  private:

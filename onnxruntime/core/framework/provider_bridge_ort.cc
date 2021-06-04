@@ -511,6 +511,7 @@ struct ProviderHostImpl : ProviderHost {
 
   // DataTypeImpl (wrapped)
   MLDataType DataTypeImpl__GetType_Tensor() override { return DataTypeImpl::GetType<Tensor>(); }
+  MLDataType DataTypeImpl__GetType_SparseTensor() override { return DataTypeImpl::GetType<SparseTensor>(); }
   MLDataType DataTypeImpl__GetType_TensorSeq () override { return DataTypeImpl::GetType<TensorSeq>(); }
   MLDataType DataTypeImpl__GetType_bool() override { return DataTypeImpl::GetType<bool>(); }
   MLDataType DataTypeImpl__GetType_int8() override { return DataTypeImpl::GetType<int8_t>(); }
@@ -550,6 +551,7 @@ struct ProviderHostImpl : ProviderHost {
   MLDataType DataTypeImpl__GetSparseTensorType_uint64() override { return DataTypeImpl::GetSparseTensorType<uint64_t>(); }
   MLDataType DataTypeImpl__GetSparseTensorType_float() override { return DataTypeImpl::GetSparseTensorType<float>(); }
   MLDataType DataTypeImpl__GetSparseTensorType_double() override { return DataTypeImpl::GetSparseTensorType<double>(); }
+  MLDataType DataTypeImpl__GetSparseTensorType_string() override { return DataTypeImpl::GetSparseTensorType<std::string>(); }
   MLDataType DataTypeImpl__GetSparseTensorType_BFloat16() override { return DataTypeImpl::GetSparseTensorType<BFloat16>(); }
   MLDataType DataTypeImpl__GetSparseTensorType_MLFloat16() override { return DataTypeImpl::GetSparseTensorType<MLFloat16>(); }
 

@@ -422,6 +422,7 @@ struct ProviderHost {
 
   // DataTypeImpl
   virtual MLDataType DataTypeImpl__GetType_Tensor() = 0;
+  virtual MLDataType DataTypeImpl__GetType_SparseTensor() = 0;
   virtual MLDataType DataTypeImpl__GetType_TensorSeq() = 0;
   virtual MLDataType DataTypeImpl__GetType_bool() = 0;
   virtual MLDataType DataTypeImpl__GetType_int8() = 0;
@@ -461,6 +462,7 @@ struct ProviderHost {
   virtual MLDataType DataTypeImpl__GetSparseTensorType_uint64() = 0;
   virtual MLDataType DataTypeImpl__GetSparseTensorType_float() = 0;
   virtual MLDataType DataTypeImpl__GetSparseTensorType_double() = 0;
+  virtual MLDataType DataTypeImpl__GetSparseTensorType_string() = 0;
   virtual MLDataType DataTypeImpl__GetSparseTensorType_BFloat16() = 0;
   virtual MLDataType DataTypeImpl__GetSparseTensorType_MLFloat16() = 0;
 

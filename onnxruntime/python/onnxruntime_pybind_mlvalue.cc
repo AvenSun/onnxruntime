@@ -34,10 +34,14 @@ using namespace onnxruntime::logging;
 const char* PYTHON_ORTVALUE_OBJECT_NAME = "OrtValue";
 const char* PYTHON_ORTVALUE_NATIVE_OBJECT_ATTR = "_ortvalue";
 
-const char* PYTHON_SPARSE_TENSOR_OBJECT_NAME = "SparseTensor";
-const char* PYTHON_SPARSE_TENSOR_NATIVE_OBJECT_ATTR = "_sparsetensor";
+void PySparseTensor::Init(std::unique_ptr<SparseTensor>&& instance) {
+  auto sparse_tensor(std::move(instance));
+  auto ml_type = DataTypeImpl::GetType<SparseTensor>();
+  ort_value_.Init(sparse_tensor.get(), ml_type, ml_type->GetDeleteFunc());
+  sparse_tensor.release();
+}
 
-PySparseTensor ::~PySparseTensor() {
+PySparseTensor::~PySparseTensor() {
   try {
     // pybind11 may throw python errors when we deref and potentially destroy its objects
     backing_storage_.clear();
@@ -107,6 +111,25 @@ void CpuToCpuMemCpy(void* dst, const void* src, size_t num_bytes) {
   memcpy(dst, src, num_bytes);
 }
 
+OrtMemoryInfo GetMemoryInfoPerDeviceType(const OrtDevice& ort_device) {
+  OrtMemoryInfo mem_info;
+  if (ort_device.Type() == OrtDevice::CPU) {
+    mem_info = GetAllocator()->Info();
+  }
+#if USE_CUDA
+  else if (ort_device.Type() == OrtDevice::GPU) {
+    if (!IsCudaDeviceIdValid(logging::LoggingManager::DefaultLogger(), ort_device.Id())) {
+      ORT_THROW("The provided device id doesn't match any available GPUs on the machine: ", ort_device.Id());
+    }
+    mem_info = GetCudaAllocator(ort_device.Id())->Info();
+  }
+#endif
+  else {
+    ORT_THROW("Unsupported OrtDevice type: ", ort_device.Type());
+  }
+  return mem_info;
+}
+
 #ifdef USE_CUDA
 void CpuToCudaMemCpy(void* dst, const void* src, size_t num_bytes) {
   GetProviderInfo_CUDA()->cudaMemcpy_HostToDevice(dst, src, num_bytes);
@@ -151,6 +174,11 @@ AllocatorPtr GetCudaAllocator(OrtDevice::DeviceId id) {
   }
 
   return (*id_to_allocator_map)[id];
+}
+
+std::unique_ptr<IDataTransfer> GetGPUDataTransfer() {
+  // Using default stream
+  return GetProviderInfo_CUDA()->CreateGPUDataTransfer(nullptr);
 }
 
 #endif
@@ -242,7 +270,7 @@ MLDataType NumpyTypeToOnnxRuntimeType(int numpy_type) {
       {NPY_UINT, DataTypeImpl::GetType<uint32_t>()},
       {NPY_LONGLONG, DataTypeImpl::GetType<int64_t>()},
       {NPY_ULONGLONG, DataTypeImpl::GetType<uint64_t>()},
-      {NPY_OBJECT, DataTypeImpl::GetType<std::string>()},
+      {NPY_OBJECT, DataTypeImpl::GetType<std::string>()}
   };
   const auto it = type_map.find(numpy_type);
   if (it == type_map.end()) {
@@ -252,7 +280,7 @@ MLDataType NumpyTypeToOnnxRuntimeType(int numpy_type) {
   }
 }
 
-const DataTypeImpl* NumpyToOnnxRuntimeTensorType(int numpy_type) {
+MLDataType NumpyToOnnxRuntimeTensorType(int numpy_type) {
   static std::map<int, MLDataType> type_map{
       {NPY_BOOL, DataTypeImpl::GetType<bool>()},
       {NPY_FLOAT, DataTypeImpl::GetType<float>()},
