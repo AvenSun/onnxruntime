@@ -36,7 +36,12 @@ struct ParamsHash {
   // Params must be a POD because we read out its memory
   // contenst as char* when hashing
 
+#if __cplusplus > 201703L || defined(_MSVC_LANG)
   static_assert(std::is_trivial_v<T>, "Params is not POD");
+#else
+  static_assert(std::is_pod<T>, "Params is not POD");
+#endif
+
   size_t operator()(const T& params) const {
     auto ptr = reinterpret_cast<const uint8_t*>(&params);
     uint32_t value = 0x811C9DC5;
@@ -52,8 +57,12 @@ template <typename T>
 struct ParamsEqual {
   // Params must be a POD because we read out its memory
   // contenst as char* when comparing
-
+  // NOTE: is_pod is deprecated in C++20
+#if __cplusplus > 201703L || defined(_MSVC_LANG)
   static_assert(std::is_trivial_v<T>, "Params is not POD");
+#else
+  static_assert(std::is_pod<T>, "Params is not POD");
+#endif
 
   bool operator()(const T& a, const T& b) const {
     auto ptr1 = reinterpret_cast<const uint8_t*>(&a);
